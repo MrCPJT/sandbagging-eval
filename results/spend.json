@@ -305,7 +305,187 @@
       "cell": "sandbagging-instructed-p9-t6",
       "model": "anthropic/claude-haiku-5-5",
       "cost_usd": 0.002921
+    },
+    {
+      "time": "2026-10-17T20:21:36+00:00",
+      "cell": "sandbagging-neutral-p0-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.094329
+    },
+    {
+      "time": "2026-10-17T20:23:28+00:00",
+      "cell": "sandbagging-neutral-p1-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.106584
+    },
+    {
+      "time": "2026-10-17T20:25:05+00:00",
+      "cell": "sandbagging-neutral-p2-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.091778
+    },
+    {
+      "time": "2026-10-17T20:26:48+00:00",
+      "cell": "sandbagging-neutral-p3-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.102531
+    },
+    {
+      "time": "2026-10-17T20:28:27+00:00",
+      "cell": "sandbagging-neutral-p4-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.097664
+    },
+    {
+      "time": "2026-10-17T20:30:06+00:00",
+      "cell": "sandbagging-neutral-p5-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.095329
+    },
+    {
+      "time": "2026-10-17T20:31:46+00:00",
+      "cell": "sandbagging-neutral-p6-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.098037
+    },
+    {
+      "time": "2026-10-17T20:33:34+00:00",
+      "cell": "sandbagging-neutral-p7-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.100836
+    },
+    {
+      "time": "2026-10-17T20:35:28+00:00",
+      "cell": "sandbagging-neutral-p8-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.11502
+    },
+    {
+      "time": "2026-10-17T20:37:14+00:00",
+      "cell": "sandbagging-neutral-p9-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.105641
+    },
+    {
+      "time": "2026-10-17T20:38:58+00:00",
+      "cell": "sandbagging-incentive-p0-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.102422
+    },
+    {
+      "time": "2026-10-17T20:40:49+00:00",
+      "cell": "sandbagging-incentive-p1-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.110732
+    },
+    {
+      "time": "2026-10-17T20:42:33+00:00",
+      "cell": "sandbagging-incentive-p2-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.103728
+    },
+    {
+      "time": "2026-10-17T20:44:26+00:00",
+      "cell": "sandbagging-incentive-p3-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.113579
+    },
+    {
+      "time": "2026-10-17T20:46:07+00:00",
+      "cell": "sandbagging-incentive-p4-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.09951
+    },
+    {
+      "time": "2026-10-17T20:47:50+00:00",
+      "cell": "sandbagging-incentive-p5-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.099928
+    },
+    {
+      "time": "2026-10-17T20:49:28+00:00",
+      "cell": "sandbagging-incentive-p6-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.098069
+    },
+    {
+      "time": "2026-10-17T20:51:24+00:00",
+      "cell": "sandbagging-incentive-p7-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.114937
+    },
+    {
+      "time": "2026-10-17T20:53:09+00:00",
+      "cell": "sandbagging-incentive-p8-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.098325
+    },
+    {
+      "time": "2026-10-17T20:54:56+00:00",
+      "cell": "sandbagging-incentive-p9-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.109622
+    },
+    {
+      "time": "2026-10-17T20:56:15+00:00",
+      "cell": "sandbagging-instructed-p0-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.059693
+    },
+    {
+      "time": "2026-10-17T20:57:53+00:00",
+      "cell": "sandbagging-instructed-p1-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.090012
+    },
+    {
+      "time": "2026-10-17T20:59:19+00:00",
+      "cell": "sandbagging-instructed-p2-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.065842
+    },
+    {
+      "time": "2026-10-17T21:00:41+00:00",
+      "cell": "sandbagging-instructed-p3-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.056582
+    },
+    {
+      "time": "2026-10-17T21:02:07+00:00",
+      "cell": "sandbagging-instructed-p4-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.073799
+    },
+    {
+      "time": "2026-10-17T21:03:16+00:00",
+      "cell": "sandbagging-instructed-p5-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.04754
+    },
+    {
+      "time": "2026-10-17T21:04:38+00:00",
+      "cell": "sandbagging-instructed-p6-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.072069
+    },
+    {
+      "time": "2026-10-17T21:06:03+00:00",
+      "cell": "sandbagging-instructed-p7-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.074451
+    },
+    {
+      "time": "2026-10-17T21:07:27+00:00",
+      "cell": "sandbagging-instructed-p8-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.07173
+    },
+    {
+      "time": "2026-10-17T21:08:49+00:00",
+      "cell": "sandbagging-instructed-p9-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.068086
     }
   ],
-  "total_usd": 0.7303
+  "total_usd": 3.4687
 }
