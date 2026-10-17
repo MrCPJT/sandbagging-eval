@@ -1,0 +1,24 @@
+[project]
+name = "sandbagging-eval"
+version = "0.1.0"
+description = "A small Inspect eval that measures prompted sandbagging against prompt-paraphrase noise"
+requires-python = "==3.12.*"
+dependencies = [
+    "inspect-ai==0.3.281",
+    "anthropic==1.15.0",
+    "pandas==3.0.6",
+    "matplotlib==3.11.2",
+]
+
+[dependency-groups]
+dev = ["pytest==9.1.1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pipeline", "src/behaviours"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+*.egg-info/
+
+# Personal notes and the AI-generated literature review stay out of the public repo
+CAUTIONS.md
+lit-review/

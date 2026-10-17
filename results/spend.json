@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "time": "2026-10-17T15:56:58+00:00",
+      "cell": "sandbagging-neutral-p0-t2",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.000277
+    }
+  ],
+  "total_usd": 0.0003
+}
