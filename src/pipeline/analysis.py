@@ -134,10 +134,70 @@ def nuisance_spread(rows: pd.DataFrame, condition: str = "neutral") -> tuple[flo
     return (float(acc.std(ddof=1)), float(acc.max() - acc.min()))
 
 
-def signal_to_noise(rows: pd.DataFrame, a: str, b: str, rng: np.random.Generator) -> Interval:
-    """Effect a - b over the SD of a across paraphrases.
+def _components(Y: np.ndarray) -> tuple[float, float]:
+    """Two-way random-effects ANOVA on a complete paraphrases x items matrix.
 
-    The CI resamples items and paraphrases together.
+    Every paraphrase sees the same items, so item difficulty is removed as a
+    column effect. The residual mean square estimates response noise plus any
+    paraphrase-item interaction. Binary outcomes make this an approximation.
+
+    Returns the SD of true paraphrase accuracies with that noise removed, and
+    the noise SD of one paraphrase's mean.
+    """
+    n_p, n_i = Y.shape
+    if n_p < 2 or n_i < 2:
+        return (math.nan, math.nan)
+    grand = Y.mean()
+    row = Y.mean(axis=1, keepdims=True)
+    col = Y.mean(axis=0, keepdims=True)
+    ms_paraphrase = n_i * ((row - grand) ** 2).sum() / (n_p - 1)
+    ms_residual = ((Y - row - col + grand) ** 2).sum() / ((n_p - 1) * (n_i - 1))
+    var_paraphrase = max(0.0, (ms_paraphrase - ms_residual) / n_i)
+    return (math.sqrt(var_paraphrase), math.sqrt(ms_residual / n_i))
+
+
+def _complete(Y: np.ndarray) -> np.ndarray:
+    """Drop items with a missing cell, e.g. a refusal under one paraphrase."""
+    return Y[:, ~np.isnan(Y).any(axis=0)]
+
+
+def _raw_sd(A: np.ndarray) -> float:
+    return float(np.nanstd(np.nanmean(A, axis=1), ddof=1))
+
+
+def _component_sd(A: np.ndarray) -> float:
+    return _components(_complete(A))[0]
+
+
+SPREADS = {"raw": _raw_sd, "component": _component_sd}
+
+
+def variance_components(
+    rows: pd.DataFrame, condition: str, rng: np.random.Generator
+) -> tuple[Interval, float]:
+    """Paraphrase SD with sampling noise removed, with a CI, and the noise SD.
+
+    The CI resamples paraphrases and items together.
+    """
+    Y = _complete(_item_matrix(rows, condition).to_numpy())
+    point, noise = _components(Y)
+    if math.isnan(point):
+        return Interval(math.nan, math.nan, math.nan), noise
+    boot = np.empty(N_BOOT)
+    for r in range(N_BOOT):
+        pi = rng.integers(0, Y.shape[0], Y.shape[0])
+        ii = rng.integers(0, Y.shape[1], Y.shape[1])
+        boot[r] = _components(Y[np.ix_(pi, ii)])[0]
+    return Interval(point, *np.percentile(boot, [2.5, 97.5])), noise
+
+
+def signal_to_noise(
+    rows: pd.DataFrame, a: str, b: str, rng: np.random.Generator, spread: str = "raw"
+) -> Interval:
+    """Effect a - b over the spread of a across paraphrases.
+
+    `spread` is "raw" (SD of observed paraphrase means) or "component" (SD with
+    sampling noise removed). The CI resamples items and paraphrases together.
     """
     ma, mb = _item_matrix(rows, a), _item_matrix(rows, b)
     paraphrases = ma.index.intersection(mb.index)
@@ -146,21 +206,22 @@ def signal_to_noise(rows: pd.DataFrame, a: str, b: str, rng: np.random.Generator
         return Interval(math.nan, math.nan, math.nan)
     A = ma.loc[paraphrases, items].to_numpy()
     B = mb.loc[paraphrases, items].to_numpy()
-    point = _snr(A, B)
+    spread_fn = SPREADS[spread]
+    point = _snr(A, B, spread_fn)
     boot = np.empty(N_BOOT)
     for r in range(N_BOOT):
         pi = rng.integers(0, len(paraphrases), len(paraphrases))
         ii = rng.integers(0, len(items), len(items))
-        boot[r] = _snr(A[np.ix_(pi, ii)], B[np.ix_(pi, ii)])
-    # Resamples that draw one paraphrase repeatedly have zero spread, so a bound
-    # can be infinite. Uninterpolated percentiles keep it infinite, not NaN.
+        boot[r] = _snr(A[np.ix_(pi, ii)], B[np.ix_(pi, ii)], spread_fn)
+    # A zero spread gives an infinite ratio. Uninterpolated percentiles keep a
+    # bound infinite rather than NaN.
     return Interval(point, *np.nanpercentile(boot, [2.5, 97.5], method="inverted_cdf"))
 
 
-def _snr(A: np.ndarray, B: np.ndarray) -> float:
+def _snr(A: np.ndarray, B: np.ndarray, spread_fn) -> float:
     with np.errstate(divide="ignore", invalid="ignore"):
         effect = np.nanmean(A - B)
-        spread = np.nanstd(np.nanmean(A, axis=1), ddof=1)
+        spread = spread_fn(A)
         if spread > 0:
             return float(effect / spread)
         return math.inf if effect != 0 else math.nan
@@ -174,12 +235,18 @@ def describe_effects(rows: pd.DataFrame, seed: int = BOOT_SEED) -> list[str]:
     rng = np.random.default_rng(seed)
     effect = paired_effect(rows, "neutral", "incentive", rng)
     sd, rng_width = nuisance_spread(rows, "neutral")
-    snr = signal_to_noise(rows, "neutral", "incentive", rng)
+    component, noise = variance_components(rows, "neutral", rng)
+    snr_raw = signal_to_noise(rows, "neutral", "incentive", rng, "raw")
+    snr_comp = signal_to_noise(rows, "neutral", "incentive", rng, "component")
     per_p = per_paraphrase_effects(rows, "neutral", "incentive")
     lines = [
         f"neutral - incentive: {effect.estimate:+.3f} [{effect.lo:+.3f}, {effect.hi:+.3f}]",
-        f"neutral paraphrase spread: SD {sd:.3f}, range {rng_width:.3f}",
-        f"signal-to-noise: {snr.estimate:.2f} [{snr.lo:.2f}, {snr.hi:.2f}]",
+        f"neutral paraphrase spread: raw SD {sd:.3f}, range {rng_width:.3f}",
+        f"  paraphrase SD, noise removed: {component.estimate:.3f} "
+        f"[{component.lo:.3f}, {component.hi:.3f}]; noise SD of a cell mean {noise:.3f}",
+        f"signal-to-noise, raw SD: {snr_raw.estimate:.2f} [{snr_raw.lo:.2f}, {snr_raw.hi:.2f}]",
+        f"signal-to-noise, noise-removed SD: {snr_comp.estimate:.2f} "
+        f"[{snr_comp.lo:.2f}, {snr_comp.hi:.2f}]",
     ]
     per_p_text = [f"p{p} {v:+.2f}" for p, v in per_p.items()]
     for start in range(0, len(per_p_text), 5):

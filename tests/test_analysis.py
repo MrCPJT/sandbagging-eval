@@ -5,12 +5,15 @@ import pandas as pd
 import pytest
 
 from pipeline.analysis import (
+    _complete,
+    _components,
     describe_effects,
     nuisance_spread,
     paired_effect,
     per_paraphrase_effects,
     signal_to_noise,
     summarise_cells,
+    variance_components,
     wilson,
 )
 
@@ -119,3 +122,63 @@ def test_per_paraphrase_effects() -> None:
 def test_describe_effects_with_neutral_only() -> None:
     rows = make_rows({("neutral", 0): [C] * 5})
     assert describe_effects(rows) == ["incentive effect: needs neutral and incentive cells"]
+
+
+def test_components_pure_paraphrase_effect() -> None:
+    Y = np.array([[1.0, 1, 1, 1], [0, 0, 0, 0]])
+    sd, noise = _components(Y)
+    assert sd == pytest.approx(math.sqrt(0.5))
+    assert noise == 0.0
+
+
+def test_components_item_effect_is_not_paraphrase_noise() -> None:
+    Y = np.array([[1.0, 0, 1, 0]] * 3)
+    assert _components(Y) == (0.0, 0.0)
+
+
+def test_components_noise_only() -> None:
+    sd, noise = _components(np.array([[1.0, 0], [0, 1]]))
+    assert sd == 0.0
+    assert noise == pytest.approx(math.sqrt(0.5))
+
+
+def test_component_sd_removes_sampling_noise() -> None:
+    rng = np.random.default_rng(1)
+    Y = (rng.random((10, 20)) < 0.9).astype(float)
+    raw = Y.mean(axis=1).std(ddof=1)
+    sd, _ = _components(Y)
+    assert raw > 0.04
+    assert sd < raw / 2
+
+
+def test_component_sd_recovers_injected_paraphrase_effect() -> None:
+    rng = np.random.default_rng(2)
+    p_true = np.linspace(0.7, 0.95, 10)
+    Y = (rng.random((10, 4000)) < p_true[:, None]).astype(float)
+    sd, _ = _components(Y)
+    assert sd == pytest.approx(p_true.std(ddof=1), abs=0.01)
+
+
+def test_complete_drops_items_with_a_missing_cell() -> None:
+    Y = np.array([[1.0, np.nan, 0], [1, 1, 0]])
+    assert _complete(Y).tolist() == [[1.0, 0.0], [1.0, 0.0]]
+
+
+def test_variance_components_needs_two_paraphrases() -> None:
+    rows = make_rows({("neutral", 0): [C, W, C]})
+    interval, noise = variance_components(rows, "neutral", np.random.default_rng(0))
+    assert math.isnan(interval.estimate) and math.isnan(noise)
+
+
+def test_signal_to_noise_with_noise_removed_spread() -> None:
+    rows = make_rows(
+        {
+            ("neutral", 0): [C] * 4,
+            ("neutral", 1): [W] * 4,
+            ("incentive", 0): [W] * 4,
+            ("incentive", 1): [W] * 4,
+        }
+    )
+    rng = np.random.default_rng(0)
+    snr = signal_to_noise(rows, "neutral", "incentive", rng, "component")
+    assert snr.estimate == pytest.approx(0.5 / math.sqrt(0.5))
