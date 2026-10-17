@@ -1,8 +1,10 @@
 import pytest
 
 from pipeline.budget import (
-    OTHER_LOGS,
-    OWN_LOGS,
+    MATCHED,
+    OTHER_MATCHED,
+    OTHER_UNMATCHED,
+    OWN_UNMATCHED,
     PRIOR,
     PRIOR_TOKENS,
     BudgetExceeded,
@@ -25,18 +27,36 @@ def test_unpriced_model_costs_nothing() -> None:
     assert token_cost("mockllm/model", 10**9, 10**9) == 0.0
 
 
-def test_tokens_prefer_own_logs() -> None:
-    rows = [Usage(HAIKU, 100, 200, 2), Usage(SONNET, 300, 900, 3)]
-    assert tokens_per_call(rows, SONNET) == ((100.0, 300.0), OWN_LOGS)
+OFF, ON = "thinking off", "thinking on"
 
 
-def test_tokens_fall_back_to_other_priced_models() -> None:
-    rows = [Usage(HAIKU, 100, 200, 2), Usage("mockllm/model", 10**6, 10**6, 1)]
-    assert tokens_per_call(rows, SONNET) == ((50.0, 100.0), OTHER_LOGS)
+def test_tokens_prefer_same_model_tier_and_setting() -> None:
+    rows = [
+        Usage(SONNET, 5, OFF, 100, 300, 1),
+        Usage(SONNET, 6, OFF, 999, 999, 1),
+        Usage(SONNET, 5, ON, 999, 999, 1),
+        Usage(HAIKU, 5, OFF, 999, 999, 1),
+    ]
+    assert tokens_per_call(rows, SONNET, 5, OFF) == ((100.0, 300.0), MATCHED)
+
+
+def test_tokens_then_other_models_at_same_tier_and_setting() -> None:
+    rows = [Usage(HAIKU, 5, OFF, 100, 200, 2), Usage(SONNET, 6, ON, 999, 999, 1)]
+    assert tokens_per_call(rows, SONNET, 5, OFF) == ((50.0, 100.0), OTHER_MATCHED)
+
+
+def test_tokens_then_same_model_any_setting() -> None:
+    rows = [Usage(SONNET, 6, ON, 100, 300, 1), Usage(HAIKU, 6, ON, 999, 999, 1)]
+    assert tokens_per_call(rows, SONNET, 5, OFF) == ((100.0, 300.0), OWN_UNMATCHED)
+
+
+def test_tokens_then_any_priced_model() -> None:
+    rows = [Usage(HAIKU, 6, ON, 100, 200, 2), Usage("mockllm/model", 5, OFF, 10**6, 10**6, 1)]
+    assert tokens_per_call(rows, SONNET, 5, OFF) == ((50.0, 100.0), OTHER_UNMATCHED)
 
 
 def test_tokens_fall_back_to_prior() -> None:
-    assert tokens_per_call([], SONNET) == (PRIOR_TOKENS, PRIOR)
+    assert tokens_per_call([], SONNET, 5, OFF) == (PRIOR_TOKENS, PRIOR)
 
 
 def test_check_refuses_over_run_cap() -> None:

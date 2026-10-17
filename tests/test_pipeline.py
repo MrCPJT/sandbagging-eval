@@ -65,6 +65,7 @@ def test_calibration_runs_one_cell_per_tier(tmp_path: Path, monkeypatch: pytest.
     model = get_model("mockllm/model", custom_outputs=mock_reply)
     cells = build_cells(BEHAVIOUR, tier=2, scope="tiers")
     assert [c.tier for c in cells] == list(BEHAVIOUR.tiers)
+    assert [c.tier for c in build_cells(BEHAVIOUR, 2, "tiers", (4, 7))] == [4, 7]
     assert {(c.condition, c.paraphrase) for c in cells} == {("neutral", 0)}
     items = {t: generate(t, n=2) for t in (1, 2)}
     run_cells(BEHAVIOUR, cells[:2], items, 1, model, tmp_path / "logs" / "cal")

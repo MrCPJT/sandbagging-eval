@@ -77,7 +77,55 @@
       "cell": "sandbagging-neutral-p0-t6",
       "model": "anthropic/claude-sonnet-5-5",
       "cost_usd": 0.13018
+    },
+    {
+      "time": "2026-10-17T20:00:19+00:00",
+      "cell": "sandbagging-neutral-p0-t4",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.001371
+    },
+    {
+      "time": "2026-10-17T20:00:23+00:00",
+      "cell": "sandbagging-neutral-p0-t5",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.002195
+    },
+    {
+      "time": "2026-10-17T20:00:28+00:00",
+      "cell": "sandbagging-neutral-p0-t6",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.003709
+    },
+    {
+      "time": "2026-10-17T20:00:35+00:00",
+      "cell": "sandbagging-neutral-p0-t7",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.005685
+    },
+    {
+      "time": "2026-10-17T20:00:42+00:00",
+      "cell": "sandbagging-neutral-p0-t4",
+      "model": "anthropic/claude-sonnet-5-5",
+      "cost_usd": 0.03213
+    },
+    {
+      "time": "2026-10-17T20:00:49+00:00",
+      "cell": "sandbagging-neutral-p0-t5",
+      "model": "anthropic/claude-sonnet-5-5",
+      "cost_usd": 0.05003
+    },
+    {
+      "time": "2026-10-17T20:00:57+00:00",
+      "cell": "sandbagging-neutral-p0-t6",
+      "model": "anthropic/claude-sonnet-5-5",
+      "cost_usd": 0.0866
+    },
+    {
+      "time": "2026-10-17T20:01:07+00:00",
+      "cell": "sandbagging-neutral-p0-t7",
+      "model": "anthropic/claude-sonnet-5-5",
+      "cost_usd": 0.12575
     }
   ],
-  "total_usd": 0.3097
+  "total_usd": 0.6171
 }

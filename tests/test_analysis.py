@@ -21,6 +21,7 @@ def make_rows(cells: dict[tuple[str, int], list[str]]) -> pd.DataFrame:
         {
             "model": "m",
             "inspect_version": "x",
+            "setting": "s",
             "behaviour": "b",
             "condition": condition,
             "paraphrase": paraphrase,

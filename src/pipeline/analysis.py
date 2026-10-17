@@ -16,6 +16,8 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from inspect_ai.log import list_eval_logs, read_eval_log  # noqa: E402
 
+from pipeline.budget import setting_label  # noqa: E402
+
 ANSWERED = ("correct", "wrong")
 N_BOOT = 2000
 BOOT_SEED = 0
@@ -36,12 +38,15 @@ def rows_from_logs(log_dir: Path) -> pd.DataFrame:
         if log.status != "success" or not log.samples:
             continue
         meta = log.eval.metadata or {}
+        config = log.plan.config
+        setting = setting_label(config.reasoning_effort, config.effort)
         for sample in log.samples:
             score = next(iter(sample.scores.values()))
             rows.append(
                 {
                     "model": log.eval.model,
                     "inspect_version": log.eval.packages.get("inspect_ai"),
+                    "setting": setting,
                     "behaviour": meta["behaviour"],
                     "condition": meta["condition"],
                     "paraphrase": meta["paraphrase"],
@@ -67,7 +72,7 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 
 def summarise_cells(rows: pd.DataFrame) -> pd.DataFrame:
-    keys = ["model", "inspect_version", "behaviour", "condition", "paraphrase", "tier"]
+    keys = ["model", "inspect_version", "setting", "behaviour", "condition", "paraphrase", "tier"]
     out = []
     for key, g in rows.groupby(keys, sort=True):
         counts = g["label"].value_counts()

@@ -36,19 +36,24 @@ PLANS: dict[str, RunPlan] = {
     "full": RunPlan(n_items=150, epochs=3, cells="all"),
 }
 
+# Thinking off for both models. Effort is fixed so both models get the same setting.
 GENERATE_CONFIG = {
-    "reasoning_effort": "medium",
+    "reasoning_effort": "none",
+    "effort": "medium",
     "max_connections": 10,
     "max_retries": 3,
 }
+SETTING = budget.setting_label(GENERATE_CONFIG["reasoning_effort"], GENERATE_CONFIG["effort"])
 
 
-def build_cells(behaviour: Behaviour, tier: int, scope: str) -> list[Cell]:
+def build_cells(
+    behaviour: Behaviour, tier: int, scope: str, tiers: tuple[int, ...] | None = None
+) -> list[Cell]:
     first = behaviour.conditions[0]
     if scope == "one":
         return [Cell(behaviour.name, first, 0, tier)]
     if scope == "tiers":
-        return [Cell(behaviour.name, first, 0, t) for t in behaviour.tiers]
+        return [Cell(behaviour.name, first, 0, t) for t in tiers or behaviour.tiers]
     return [
         Cell(behaviour.name, condition, paraphrase, tier)
         for condition in behaviour.conditions
@@ -57,17 +62,23 @@ def build_cells(behaviour: Behaviour, tier: int, scope: str) -> list[Cell]:
 
 
 def print_plan(
-    cells: list[Cell], items: dict[int, list[Item]], epochs: int, model: str, per_call: float
+    cells: list[Cell],
+    items: dict[int, list[Item]],
+    epochs: int,
+    model: str,
+    per_call: dict[int, tuple[float, str]],
 ) -> float:
-    print(f"model {model}  epochs {epochs}  per-call ${per_call:.5f}")
-    print(f"{'cell':<40}{'calls':>8}{'est $':>10}")
-    total_calls = 0
+    """Print one row per cell with its cost basis, and return the total estimate."""
+    print(f"model {model}  epochs {epochs}  {SETTING}")
+    print(f"{'cell':<36}{'calls':>7}{'$/call':>10}{'est $':>9}  basis")
+    total_calls, estimate = 0, 0.0
     for cell in cells:
         calls = len(items[cell.tier]) * epochs
+        cost, basis = per_call[cell.tier]
         total_calls += calls
-        print(f"{cell.name:<40}{calls:>8}{calls * per_call:>10.4f}")
-    estimate = total_calls * per_call
-    print(f"{'total':<40}{total_calls:>8}{estimate:>10.4f}")
+        estimate += calls * cost
+        print(f"{cell.name:<36}{calls:>7}{cost:>10.5f}{calls * cost:>9.4f}  {basis}")
+    print(f"{'total':<36}{total_calls:>7}{'':>10}{estimate:>9.4f}")
     print(f"with {budget.SAFETY_MARGIN}x margin: ${estimate * budget.SAFETY_MARGIN:.4f}")
     return estimate
 
@@ -79,14 +90,15 @@ def run_cells(
     epochs: int,
     model: str | Model,
     log_dir: Path,
-    per_call: float = 0.0,
+    per_call: dict[int, tuple[float, str]] | None = None,
 ) -> list[EvalLog]:
     """Run cells one at a time, halting before any cell that would break the total cap."""
     logs = []
     model_name = model if isinstance(model, str) else str(model)
     for cell in cells:
         cell_items = items[cell.tier]
-        cell_estimate = len(cell_items) * epochs * per_call * budget.SAFETY_MARGIN
+        cost = per_call[cell.tier][0] if per_call else 0.0
+        cell_estimate = len(cell_items) * epochs * cost * budget.SAFETY_MARGIN
         spent = budget.logged_spend(LOG_ROOT)
         if spent + cell_estimate > budget.TOTAL_CAP_USD:
             raise budget.BudgetExceeded(f"halting before {cell.name}: spent ${spent:.2f}")
@@ -108,6 +120,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--behaviour", default="sandbagging")
     parser.add_argument("--model", default="anthropic/claude-haiku-5-5")
     parser.add_argument("--tier", type=int, default=2, help="ignored by calibrate")
+    parser.add_argument("--tiers", help="comma-separated tiers for calibrate")
     parser.add_argument("--epochs", type=int, help="override the plan's epochs")
     parser.add_argument("--run-cap", type=float, default=budget.RUN_CAP_USD)
     parser.add_argument("--approve", action="store_true", help="start the run")
@@ -116,17 +129,21 @@ def main(argv: list[str] | None = None) -> None:
     plan = PLANS[args.mode]
     epochs = args.epochs or plan.epochs
     behaviour = get_behaviour(args.behaviour)
-    cells = build_cells(behaviour, args.tier, plan.cells)
-    items = {t: behaviour.items(t)[: plan.n_items] for t in {c.tier for c in cells}}
+    tiers = tuple(int(t) for t in args.tiers.split(",")) if args.tiers else None
+    cells = build_cells(behaviour, args.tier, plan.cells, tiers)
+    cell_tiers = sorted({c.tier for c in cells})
+    items = {t: behaviour.items(t)[: plan.n_items] for t in cell_tiers}
+    per_call = {t: budget.per_call_cost(args.model, LOG_ROOT, t, SETTING) for t in cell_tiers}
 
-    per_call, basis = budget.per_call_cost(args.model, LOG_ROOT)
-    print(f"per-call cost basis: {basis}")
     estimate = print_plan(cells, items, epochs, args.model, per_call)
     spent = budget.logged_spend(LOG_ROOT)
     print(f"spent so far ${spent:.4f} of ${budget.TOTAL_CAP_USD:.2f}")
     budget.check(estimate, spent, args.run_cap)
-    if args.mode == "full" and basis != budget.OWN_LOGS:
-        raise budget.BudgetExceeded("a full run needs this model's own token counts; run dry first")
+    if args.mode == "full" and any(b != budget.MATCHED for _, b in per_call.values()):
+        raise budget.BudgetExceeded(
+            "a full run needs this model's own token counts at this tier and setting; "
+            "run dry first"
+        )
 
     if not args.approve:
         print("Not started. Re-run with --approve to start.")

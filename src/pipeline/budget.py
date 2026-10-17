@@ -25,8 +25,10 @@ SAFETY_MARGIN = 1.25
 
 SPEND_PATH = Path("results/spend.json")
 
-OWN_LOGS = "this model's logs"
-OTHER_LOGS = "token counts from other models' logs"
+MATCHED = "this model, same tier and setting"
+OTHER_MATCHED = "other models, same tier and setting"
+OWN_UNMATCHED = "this model, other tiers or settings"
+OTHER_UNMATCHED = "other models, other tiers or settings"
 PRIOR = "prior token counts"
 
 
@@ -49,9 +51,16 @@ def token_cost(model: str, input_tokens: float, output_tokens: float) -> float:
 @dataclass(frozen=True)
 class Usage:
     model: str
+    tier: int | None
+    setting: str
     input_tokens: int
     output_tokens: int
     calls: int
+
+
+def setting_label(reasoning_effort: str | None, effort: str | None) -> str:
+    """Generation settings that change token use, as one comparable label."""
+    return f"reasoning_effort={reasoning_effort} effort={effort}"
 
 
 def _input_tokens(usage) -> int:
@@ -86,20 +95,37 @@ def logged_usage(log_root: Path) -> list[Usage]:
     for log in _headers(log_root):
         if log.results is None or log.results.completed_samples == 0:
             continue
+        tier = (log.eval.metadata or {}).get("tier")
+        config = log.plan.config
+        setting = setting_label(config.reasoning_effort, config.effort)
         for model, usage in log.stats.model_usage.items():
             calls = log.results.completed_samples
-            rows.append(Usage(model, _input_tokens(usage), usage.output_tokens, calls))
+            rows.append(
+                Usage(model, tier, setting, _input_tokens(usage), usage.output_tokens, calls)
+            )
     return rows
 
 
-def tokens_per_call(rows: list[Usage], model: str) -> tuple[tuple[float, float], str]:
-    """Mean (input, output) tokens per call, and where the numbers came from.
+def tokens_per_call(
+    rows: list[Usage], model: str, tier: int, setting: str
+) -> tuple[tuple[float, float], str]:
+    """Mean (input, output) tokens per call, and which logs the numbers came from.
 
-    Uses this model's logs, then other priced models' logs, then the prior.
+    Prefers the closest match: this model at this tier and setting, then other
+    priced models at this tier and setting, then this model at any tier or
+    setting, then any priced model, then the prior.
     """
-    own = [r for r in rows if r.model == model]
-    other = [r for r in rows if r.model != model and is_priced(r.model)]
-    for subset, basis in ((own, OWN_LOGS), (other, OTHER_LOGS)):
+    def matched(r: Usage) -> bool:
+        return r.tier == tier and r.setting == setting
+
+    levels = [
+        (lambda r: r.model == model and matched(r), MATCHED),
+        (lambda r: r.model != model and is_priced(r.model) and matched(r), OTHER_MATCHED),
+        (lambda r: r.model == model, OWN_UNMATCHED),
+        (lambda r: is_priced(r.model), OTHER_UNMATCHED),
+    ]
+    for keep, basis in levels:
+        subset = [r for r in rows if keep(r)]
         calls = sum(r.calls for r in subset)
         if calls:
             mean_in = sum(r.input_tokens for r in subset) / calls
@@ -108,8 +134,11 @@ def tokens_per_call(rows: list[Usage], model: str) -> tuple[tuple[float, float],
     return PRIOR_TOKENS, PRIOR
 
 
-def per_call_cost(model: str, log_root: Path) -> tuple[float, str]:
-    (mean_in, mean_out), basis = tokens_per_call(logged_usage(log_root), model)
+def per_call_cost(
+    model: str, log_root: Path, tier: int, setting: str
+) -> tuple[float, str]:
+    rows = logged_usage(log_root)
+    (mean_in, mean_out), basis = tokens_per_call(rows, model, tier, setting)
     return token_cost(model, mean_in, mean_out), basis
 
 
