@@ -231,36 +231,71 @@ def _snr(A: np.ndarray, B: np.ndarray, spread_fn) -> float:
         return math.inf if effect != 0 else math.nan
 
 
-def describe_effects(rows: pd.DataFrame, seed: int = BOOT_SEED) -> list[str]:
-    """Text lines for the neutral-incentive effect, spread and signal-to-noise."""
+@dataclass(frozen=True)
+class Effects:
+    incentive: Interval
+    raw_sd: float
+    raw_range: float
+    paraphrase_sd: Interval
+    noise_sd: float
+    snr_raw: Interval
+    snr_component: Interval
+    per_paraphrase: pd.Series
+    instructed: Interval | None
+
+
+def compute_effects(rows: pd.DataFrame, seed: int = BOOT_SEED) -> Effects | None:
+    """Every headline quantity for one model's rows.
+
+    Each bootstrap gets a fresh generator from `seed`, so a number does not
+    depend on which other quantities were computed first.
+    """
     conditions = set(rows["condition"])
     if not {"neutral", "incentive"} <= conditions:
+        return None
+
+    def rng() -> np.random.Generator:
+        return np.random.default_rng(seed)
+
+    sd, width = nuisance_spread(rows, "neutral")
+    component, noise = variance_components(rows, "neutral", rng())
+    instructed = (
+        paired_effect(rows, "neutral", "instructed", rng()) if "instructed" in conditions else None
+    )
+    return Effects(
+        incentive=paired_effect(rows, "neutral", "incentive", rng()),
+        raw_sd=sd,
+        raw_range=width,
+        paraphrase_sd=component,
+        noise_sd=noise,
+        snr_raw=signal_to_noise(rows, "neutral", "incentive", rng(), "raw"),
+        snr_component=signal_to_noise(rows, "neutral", "incentive", rng(), "component"),
+        per_paraphrase=per_paraphrase_effects(rows, "neutral", "incentive"),
+        instructed=instructed,
+    )
+
+
+def describe_effects(rows: pd.DataFrame, seed: int = BOOT_SEED) -> list[str]:
+    """Text lines for the neutral-incentive effect, spread and signal-to-noise."""
+    e = compute_effects(rows, seed)
+    if e is None:
         return ["incentive effect: needs neutral and incentive cells"]
-    rng = np.random.default_rng(seed)
-    effect = paired_effect(rows, "neutral", "incentive", rng)
-    sd, rng_width = nuisance_spread(rows, "neutral")
-    component, noise = variance_components(rows, "neutral", rng)
-    snr_raw = signal_to_noise(rows, "neutral", "incentive", rng, "raw")
-    snr_comp = signal_to_noise(rows, "neutral", "incentive", rng, "component")
-    per_p = per_paraphrase_effects(rows, "neutral", "incentive")
+    i, c, sr, sc = e.incentive, e.paraphrase_sd, e.snr_raw, e.snr_component
     lines = [
-        f"neutral - incentive: {effect.estimate:+.3f} [{effect.lo:+.3f}, {effect.hi:+.3f}]",
-        f"neutral paraphrase spread: raw SD {sd:.3f}, range {rng_width:.3f}",
-        f"  paraphrase SD, noise removed: {component.estimate:.3f} "
-        f"[{component.lo:.3f}, {component.hi:.3f}]; noise SD of a cell mean {noise:.3f}",
-        f"signal-to-noise, raw SD: {snr_raw.estimate:.2f} [{snr_raw.lo:.2f}, {snr_raw.hi:.2f}]",
-        f"signal-to-noise, noise-removed SD: {snr_comp.estimate:.2f} "
-        f"[{snr_comp.lo:.2f}, {snr_comp.hi:.2f}]",
+        f"neutral - incentive: {i.estimate:+.3f} [{i.lo:+.3f}, {i.hi:+.3f}]",
+        f"neutral paraphrase spread: raw SD {e.raw_sd:.3f}, range {e.raw_range:.3f}",
+        f"  paraphrase SD, noise removed: {c.estimate:.3f} [{c.lo:.3f}, {c.hi:.3f}]; "
+        f"noise SD of a cell mean {e.noise_sd:.3f}",
+        f"signal-to-noise, raw SD: {sr.estimate:.2f} [{sr.lo:.2f}, {sr.hi:.2f}]",
+        f"signal-to-noise, noise-removed SD: {sc.estimate:.2f} [{sc.lo:.2f}, {sc.hi:.2f}]",
     ]
-    per_p_text = [f"p{p} {v:+.2f}" for p, v in per_p.items()]
+    per_p_text = [f"p{p} {v:+.2f}" for p, v in e.per_paraphrase.items()]
     for start in range(0, len(per_p_text), 5):
         label = "per-paraphrase effect: " if start == 0 else " " * 23
         lines.append(label + ", ".join(per_p_text[start : start + 5]))
-    if "instructed" in conditions:
-        ctrl = paired_effect(rows, "neutral", "instructed", rng)
-        lines.append(
-            f"neutral - instructed: {ctrl.estimate:+.3f} [{ctrl.lo:+.3f}, {ctrl.hi:+.3f}]"
-        )
+    if e.instructed is not None:
+        t = e.instructed
+        lines.append(f"neutral - instructed: {t.estimate:+.3f} [{t.lo:+.3f}, {t.hi:+.3f}]")
     return lines
 
 

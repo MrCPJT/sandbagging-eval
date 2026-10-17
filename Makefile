@@ -11,7 +11,7 @@ KEYCHAIN_ITEM ?= ntl-anthropic-api
 KEY = key="$$(security find-generic-password -s $(KEYCHAIN_ITEM) -w)" && ANTHROPIC_API_KEY="$$key"
 RUN = $(if $(APPROVE),$(KEY)) $(PY) -m pipeline.runner $(1) --model $(MODEL) --tier $(TIER) $(if $(TIERS),--tiers $(TIERS)) $(if $(EPOCHS),--epochs $(EPOCHS)) $(if $(APPROVE),--approve)
 
-.PHONY: items items-replication skeleton calibrate dry run replicate analyse test
+.PHONY: items items-replication skeleton calibrate dry run replicate analyse report test
 
 items:
 	$(PY) -c "from behaviours.sandbagging.items import main; main()"
@@ -37,6 +37,10 @@ replicate:
 
 analyse:
 	$(PY) -m pipeline.analysis logs/$(MODE) results/$(MODE)
+
+# Every number quoted in the README
+report:
+	$(PY) -m pipeline.report
 
 test:
 	uv run pytest -q
