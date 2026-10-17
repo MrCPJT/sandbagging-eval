@@ -485,7 +485,19 @@
       "cell": "sandbagging-instructed-p9-t6",
       "model": "anthropic/claude-haiku-5-5",
       "cost_usd": 0.068086
+    },
+    {
+      "time": "2026-10-17T21:16:06+00:00",
+      "cell": "sandbagging-neutral-p8-t6-s20261018",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.111107
+    },
+    {
+      "time": "2026-10-17T21:17:53+00:00",
+      "cell": "sandbagging-incentive-p8-t6-s20261018",
+      "model": "anthropic/claude-haiku-5-5",
+      "cost_usd": 0.096276
     }
   ],
-  "total_usd": 3.4687
+  "total_usd": 3.6761
 }

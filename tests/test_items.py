@@ -6,8 +6,10 @@ import pytest
 from behaviours.sandbagging.items import (
     ITEMS_PATH,
     N_PER_TIER,
+    REPLICATION_SEED,
     TIERS,
     generate,
+    items_path,
     load_items,
     write_items,
 )
@@ -50,3 +52,15 @@ def test_round_trip_filters_by_tier(tmp_path: Path) -> None:
 @pytest.mark.parametrize("tier", TIERS)
 def test_committed_items_match_generator(tier: int) -> None:
     assert load_items(tier) == generate(tier)
+
+
+def test_replication_items_are_fresh_and_tagged() -> None:
+    main = {i.prompt for i in generate(6)}
+    fresh = generate(6, seed=REPLICATION_SEED)
+    assert not main & {i.prompt for i in fresh}
+    assert all(i.id.startswith(f"s{REPLICATION_SEED}-") for i in fresh)
+
+
+@pytest.mark.skipif(not items_path(REPLICATION_SEED).exists(), reason="not generated")
+def test_committed_replication_items_match_generator() -> None:
+    assert load_items(6, items_path(REPLICATION_SEED)) == generate(6, seed=REPLICATION_SEED)

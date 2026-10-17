@@ -4,7 +4,7 @@ Without --approve the runner prints the cell table and cost estimate and exits.
 """
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from inspect_ai import eval as inspect_eval
@@ -34,6 +34,7 @@ PLANS: dict[str, RunPlan] = {
     "calibrate": RunPlan(n_items=20, epochs=1, cells="tiers"),
     "dry": RunPlan(n_items=20, epochs=1, cells="all"),
     "full": RunPlan(n_items=150, epochs=3, cells="all"),
+    "replicate": RunPlan(n_items=150, epochs=3, cells="all"),
 }
 
 # Thinking off for both models. Effort is fixed so both models get the same setting.
@@ -59,6 +60,19 @@ def build_cells(
         for condition in behaviour.conditions
         for paraphrase in range(behaviour.n_paraphrases)
     ]
+
+
+def select_cells(
+    cells: list[Cell], conditions: str | None, paraphrases: str | None, item_seed: int | None
+) -> list[Cell]:
+    """Keep the listed conditions and paraphrases, and tag cells with the item set."""
+    if conditions:
+        keep = set(conditions.split(","))
+        cells = [c for c in cells if c.condition in keep]
+    if paraphrases:
+        keep_p = {int(p) for p in paraphrases.split(",")}
+        cells = [c for c in cells if c.paraphrase in keep_p]
+    return [replace(c, item_seed=item_seed) for c in cells]
 
 
 def print_plan(
@@ -121,6 +135,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--model", default="anthropic/claude-haiku-5-5")
     parser.add_argument("--tier", type=int, default=2, help="ignored by calibrate")
     parser.add_argument("--tiers", help="comma-separated tiers for calibrate")
+    parser.add_argument("--conditions", help="comma-separated conditions to keep")
+    parser.add_argument("--paraphrases", help="comma-separated paraphrases to keep")
+    parser.add_argument("--item-seed", type=int, help="use a stored item set other than the main one")
     parser.add_argument("--epochs", type=int, help="override the plan's epochs")
     parser.add_argument("--run-cap", type=float, default=budget.RUN_CAP_USD)
     parser.add_argument("--approve", action="store_true", help="start the run")
@@ -130,9 +147,13 @@ def main(argv: list[str] | None = None) -> None:
     epochs = args.epochs or plan.epochs
     behaviour = get_behaviour(args.behaviour)
     tiers = tuple(int(t) for t in args.tiers.split(",")) if args.tiers else None
-    cells = build_cells(behaviour, args.tier, plan.cells, tiers)
+    cells = select_cells(
+        build_cells(behaviour, args.tier, plan.cells, tiers),
+        args.conditions, args.paraphrases, args.item_seed,
+    )
     cell_tiers = sorted({c.tier for c in cells})
-    items = {t: behaviour.items(t)[: plan.n_items] for t in cell_tiers}
+    load = (lambda t: behaviour.items(t, args.item_seed)) if args.item_seed else behaviour.items
+    items = {t: load(t)[: plan.n_items] for t in cell_tiers}
     per_call = {t: budget.per_call_cost(args.model, LOG_ROOT, t, SETTING) for t in cell_tiers}
 
     estimate = print_plan(cells, items, epochs, args.model, per_call)

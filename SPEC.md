@@ -69,6 +69,12 @@ Outcome metrics
 - Signal-to-noise. Incentive effect divided by nuisance spread. Its CI comes from bootstrapping items and paraphrases. Report neutral accuracy alongside it, because spread shrinks near ceiling.
 - Refusal and eval-aware rates per cell. A refusal is not a wrong answer and must not be counted as sandbagging.
 
+Confirmatory replication (added 17 October)
+
+- The full Haiku run found the incentive effect only under paraphrase 8 (+0.136 [+0.084, +0.187]; the other nine −0.001). That paraphrase was picked out after seeing the data.
+- Rerun paraphrase 8, neutral and incentive only, on 150 fresh tier-6 items (seed 20261018, `data/items_seed20261018.jsonl`, no overlap with the main set), 3 epochs, 900 calls. `make replicate`.
+- The README reports the original and the replication side by side, whatever the replication shows.
+
 Next steps (README only, not v0)
 
 - A hierarchical Bayesian model with paraphrase as a random effect, via HiBayES or the AISI propensity-inference code.

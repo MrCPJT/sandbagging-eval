@@ -14,10 +14,12 @@ class Cell:
     condition: str
     paraphrase: int
     tier: int
+    item_seed: int | None = None  # None means the behaviour's main item set
 
     @property
     def name(self) -> str:
-        return f"{self.behaviour}-{self.condition}-p{self.paraphrase}-t{self.tier}"
+        name = f"{self.behaviour}-{self.condition}-p{self.paraphrase}-t{self.tier}"
+        return name if self.item_seed is None else f"{name}-s{self.item_seed}"
 
 
 @scorer(metrics=[accuracy(), stderr()])

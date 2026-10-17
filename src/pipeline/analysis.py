@@ -51,6 +51,7 @@ def rows_from_logs(log_dir: Path) -> pd.DataFrame:
                     "condition": meta["condition"],
                     "paraphrase": meta["paraphrase"],
                     "tier": meta["tier"],
+                    "item_seed": str(meta.get("item_seed") or "main"),
                     "item": sample.id,
                     "epoch": sample.epoch,
                     "label": score.metadata["label"],
@@ -72,7 +73,10 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 
 def summarise_cells(rows: pd.DataFrame) -> pd.DataFrame:
-    keys = ["model", "inspect_version", "setting", "behaviour", "condition", "paraphrase", "tier"]
+    keys = [
+        "model", "inspect_version", "setting", "behaviour",
+        "condition", "paraphrase", "tier", "item_seed",
+    ]
     out = []
     for key, g in rows.groupby(keys, sort=True):
         counts = g["label"].value_counts()
@@ -311,7 +315,8 @@ def _plot_model(ax: plt.Axes, cells: pd.DataFrame) -> None:
     ax.set_xlim(-0.5, len(groups) - 0.5)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("accuracy on answered items (Wilson 95%)")
-    ax.legend(loc="lower left", fontsize=8, frameon=False)
+    if ax.get_legend_handles_labels()[0]:
+        ax.legend(loc="lower left", fontsize=8, frameon=False)
 
 
 def analyse(log_dir: Path, out_dir: Path) -> pd.DataFrame:

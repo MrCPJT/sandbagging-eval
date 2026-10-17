@@ -9,7 +9,7 @@ from inspect_ai.model import ModelOutput, get_model
 from behaviours.sandbagging import BEHAVIOUR
 from behaviours.sandbagging.items import generate
 from pipeline.analysis import analyse
-from pipeline.runner import build_cells, run_cells
+from pipeline.runner import build_cells, run_cells, select_cells
 from pipeline.task import Cell
 
 QUESTION = re.compile(r"What is (\d+) × (\d+)\?")
@@ -72,3 +72,12 @@ def test_calibration_runs_one_cell_per_tier(tmp_path: Path, monkeypatch: pytest.
     summary = analyse(tmp_path / "logs" / "cal", tmp_path / "results")
     assert sorted(summary["tier"]) == [1, 2]
     assert (summary["acc_all"] == 1.0).all()
+
+
+def test_select_cells_filters_and_tags_item_seed() -> None:
+    cells = select_cells(build_cells(BEHAVIOUR, 6, "all"), "neutral,incentive", "8", 7)
+    assert [(c.condition, c.paraphrase, c.item_seed) for c in cells] == [
+        ("neutral", 8, 7),
+        ("incentive", 8, 7),
+    ]
+    assert cells[0].name == "sandbagging-neutral-p8-t6-s7"

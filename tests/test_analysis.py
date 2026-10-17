@@ -29,6 +29,7 @@ def make_rows(cells: dict[tuple[str, int], list[str]]) -> pd.DataFrame:
             "condition": condition,
             "paraphrase": paraphrase,
             "tier": 1,
+            "item_seed": "main",
             "item": f"i{k}",
             "epoch": 1,
             "label": label,

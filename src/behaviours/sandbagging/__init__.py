@@ -11,8 +11,8 @@ class Sandbagging:
     n_paraphrases: int = len(prompts.PARAPHRASES)
     tiers: tuple[int, ...] = tuple(items.TIERS)
 
-    def items(self, tier: int) -> list[Item]:
-        return items.load_items(tier)
+    def items(self, tier: int, seed: int = items.SEED) -> list[Item]:
+        return items.load_items(tier, items.items_path(seed))
 
     def system_prompt(self, condition: str, paraphrase: int) -> str:
         return prompts.system_prompt(condition, paraphrase)

@@ -27,7 +27,8 @@ class Behaviour(Protocol):
     n_paraphrases: int
     tiers: tuple[int, ...]
 
-    def items(self, tier: int) -> list[Item]: ...
+    def items(self, tier: int, seed: int = ...) -> list[Item]:
+        """Items for a tier. `seed` selects a stored item set; the default is the main one."""
 
     def system_prompt(self, condition: str, paraphrase: int) -> str: ...
 
