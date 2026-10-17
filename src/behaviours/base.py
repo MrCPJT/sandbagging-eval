@@ -25,6 +25,7 @@ class Behaviour(Protocol):
     name: str
     conditions: tuple[str, ...]
     n_paraphrases: int
+    tiers: tuple[int, ...]
 
     def items(self, tier: int) -> list[Item]: ...
 

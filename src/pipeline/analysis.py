@@ -198,18 +198,36 @@ def plot_cells(summary: pd.DataFrame, notes: dict[str, list[str]], path: Path) -
     plt.close(fig)
 
 
+CONDITION_ORDER = ("neutral", "incentive", "instructed")
+
+
+def _groups(cells: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
+    """One x-axis group per condition, or per condition and tier when tiers vary."""
+    multi_tier = cells["tier"].nunique() > 1
+    keys = sorted(
+        set(zip(cells["condition"], cells["tier"])),
+        key=lambda k: (CONDITION_ORDER.index(k[0]) if k[0] in CONDITION_ORDER else 99, k[1]),
+    )
+    return [
+        (
+            f"{c}\ntier {t}" if multi_tier else c,
+            cells[(cells["condition"] == c) & (cells["tier"] == t)].sort_values("paraphrase"),
+        )
+        for c, t in keys
+    ]
+
+
 def _plot_model(ax: plt.Axes, cells: pd.DataFrame, notes: list[str]) -> None:
-    conditions = [c for c in ("neutral", "incentive", "instructed") if c in set(cells["condition"])]
+    groups = _groups(cells)
     neutral = cells[cells["condition"] == "neutral"]["acc_answered"]
-    if len(neutral) > 1:
+    if cells["tier"].nunique() == 1 and len(neutral) > 1:
         ax.axhspan(neutral.min(), neutral.max(), color="0.9", label="neutral paraphrase range")
-    for x, condition in enumerate(conditions):
-        g = cells[cells["condition"] == condition].sort_values("paraphrase")
-        offsets = np.linspace(-0.15, 0.15, len(g)) if len(g) > 1 else [0.0]
+    for x, (_, g) in enumerate(groups):
+        offsets = np.linspace(-0.3, 0.3, len(g)) if len(g) > 1 else [0.0]
         yerr = [g["acc_answered"] - g["acc_answered_lo"], g["acc_answered_hi"] - g["acc_answered"]]
-        ax.errorbar(x + np.asarray(offsets), g["acc_answered"], yerr=yerr, fmt="o", capsize=3)
-    ax.set_xticks(range(len(conditions)), conditions)
-    ax.set_xlim(-0.5, len(conditions) - 0.5)
+        ax.errorbar(x + np.asarray(offsets), g["acc_answered"], yerr=yerr, fmt="o", ms=3, capsize=2)
+    ax.set_xticks(range(len(groups)), [label for label, _ in groups])
+    ax.set_xlim(-0.5, len(groups) - 0.5)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("accuracy on answered items (Wilson 95%)")
     if notes:

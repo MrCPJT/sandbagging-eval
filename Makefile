@@ -9,13 +9,16 @@ KEYCHAIN_ITEM ?= ntl-anthropic-api
 KEY = key="$$(security find-generic-password -s $(KEYCHAIN_ITEM) -w)" && ANTHROPIC_API_KEY="$$key"
 RUN = $(if $(APPROVE),$(KEY)) $(PY) -m pipeline.runner $(1) --model $(MODEL) --tier $(TIER) $(if $(APPROVE),--approve)
 
-.PHONY: items skeleton dry run analyse test
+.PHONY: items skeleton calibrate dry run analyse test
 
 items:
 	$(PY) -c "from behaviours.sandbagging.items import main; main()"
 
 skeleton:
 	$(call RUN,skeleton)
+
+calibrate:
+	$(call RUN,calibrate)
 
 dry:
 	$(call RUN,dry)

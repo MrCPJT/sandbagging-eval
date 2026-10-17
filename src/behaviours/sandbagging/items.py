@@ -14,7 +14,9 @@ N_PER_TIER = 150
 ITEMS_PATH = Path("data/items.jsonl")
 
 # Operand digit counts per difficulty tier
-TIERS: dict[int, tuple[int, int]] = {1: (2, 2), 2: (3, 3), 3: (4, 4), 4: (5, 4)}
+TIERS: dict[int, tuple[int, int]] = {
+    1: (2, 2), 2: (3, 3), 3: (4, 4), 4: (5, 4), 5: (6, 6), 6: (8, 8),
+}
 
 
 def _operand(rng: random.Random, digits: int) -> int:

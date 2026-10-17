@@ -9,6 +9,7 @@ class Sandbagging:
     name: str = "sandbagging"
     conditions: tuple[str, ...] = tuple(prompts.CONDITION_SENTENCES)
     n_paraphrases: int = len(prompts.PARAPHRASES)
+    tiers: tuple[int, ...] = tuple(items.TIERS)
 
     def items(self, tier: int) -> list[Item]:
         return items.load_items(tier)

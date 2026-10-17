@@ -1,6 +1,7 @@
 """Cost estimates, spend tracking from Inspect logs, and hard caps."""
 
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +25,10 @@ SAFETY_MARGIN = 1.25
 
 SPEND_PATH = Path("results/spend.json")
 
+OWN_LOGS = "this model's logs"
+OTHER_LOGS = "token counts from other models' logs"
+PRIOR = "prior token counts"
+
 
 class BudgetExceeded(RuntimeError):
     pass
@@ -33,7 +38,7 @@ def is_priced(model: str) -> bool:
     return model in PRICES_PER_MTOK
 
 
-def token_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+def token_cost(model: str, input_tokens: float, output_tokens: float) -> float:
     """Cost in USD. Unpriced models (e.g. mockllm) cost nothing."""
     if not is_priced(model):
         return 0.0
@@ -41,17 +46,28 @@ def token_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     return (input_tokens * p_in + output_tokens * p_out) / 1e6
 
 
+@dataclass(frozen=True)
+class Usage:
+    model: str
+    input_tokens: int
+    output_tokens: int
+    calls: int
+
+
+def _input_tokens(usage) -> int:
+    """Input tokens, with cache writes and reads charged as plain input."""
+    return (
+        usage.input_tokens
+        + (usage.input_tokens_cache_write or 0)
+        + (usage.input_tokens_cache_read or 0)
+    )
+
+
 def log_cost(log: EvalLog) -> float:
-    """Cost of one log from its usage fields. Cache tokens are charged as input."""
-    total = 0.0
-    for model, usage in log.stats.model_usage.items():
-        input_tokens = (
-            usage.input_tokens
-            + (usage.input_tokens_cache_write or 0)
-            + (usage.input_tokens_cache_read or 0)
-        )
-        total += token_cost(model, input_tokens, usage.output_tokens)
-    return total
+    return sum(
+        token_cost(model, _input_tokens(usage), usage.output_tokens)
+        for model, usage in log.stats.model_usage.items()
+    )
 
 
 def _headers(log_root: Path) -> list[EvalLog]:
@@ -64,16 +80,37 @@ def logged_spend(log_root: Path) -> float:
     return sum(log_cost(log) for log in _headers(log_root))
 
 
-def per_call_cost(model: str, log_root: Path) -> float:
-    """Mean cost per call from this model's existing logs, else the prior."""
-    cost, calls = 0.0, 0
+def logged_usage(log_root: Path) -> list[Usage]:
+    """Token totals and call counts per log. Calls include epochs."""
+    rows = []
     for log in _headers(log_root):
-        if log.eval.model == model and log.results is not None:
-            cost += log_cost(log)
-            calls += log.results.completed_samples
-    if calls > 0:
-        return cost / calls
-    return token_cost(model, *PRIOR_TOKENS)
+        if log.results is None or log.results.completed_samples == 0:
+            continue
+        for model, usage in log.stats.model_usage.items():
+            calls = log.results.completed_samples
+            rows.append(Usage(model, _input_tokens(usage), usage.output_tokens, calls))
+    return rows
+
+
+def tokens_per_call(rows: list[Usage], model: str) -> tuple[tuple[float, float], str]:
+    """Mean (input, output) tokens per call, and where the numbers came from.
+
+    Uses this model's logs, then other priced models' logs, then the prior.
+    """
+    own = [r for r in rows if r.model == model]
+    other = [r for r in rows if r.model != model and is_priced(r.model)]
+    for subset, basis in ((own, OWN_LOGS), (other, OTHER_LOGS)):
+        calls = sum(r.calls for r in subset)
+        if calls:
+            mean_in = sum(r.input_tokens for r in subset) / calls
+            mean_out = sum(r.output_tokens for r in subset) / calls
+            return (mean_in, mean_out), basis
+    return PRIOR_TOKENS, PRIOR
+
+
+def per_call_cost(model: str, log_root: Path) -> tuple[float, str]:
+    (mean_in, mean_out), basis = tokens_per_call(logged_usage(log_root), model)
+    return token_cost(model, mean_in, mean_out), basis
 
 
 def check(estimate: float, spent: float, run_cap: float = RUN_CAP_USD) -> None:

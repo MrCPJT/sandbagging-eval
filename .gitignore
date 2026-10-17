@@ -7,3 +7,4 @@ __pycache__/
 # Personal notes and the AI-generated literature review stay out of the public repo
 CAUTIONS.md
 lit-review/
+application/
