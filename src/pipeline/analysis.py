@@ -180,8 +180,11 @@ def describe_effects(rows: pd.DataFrame, seed: int = BOOT_SEED) -> list[str]:
         f"neutral - incentive: {effect.estimate:+.3f} [{effect.lo:+.3f}, {effect.hi:+.3f}]",
         f"neutral paraphrase spread: SD {sd:.3f}, range {rng_width:.3f}",
         f"signal-to-noise: {snr.estimate:.2f} [{snr.lo:.2f}, {snr.hi:.2f}]",
-        "per-paraphrase effect: " + ", ".join(f"p{p} {v:+.3f}" for p, v in per_p.items()),
     ]
+    per_p_text = [f"p{p} {v:+.2f}" for p, v in per_p.items()]
+    for start in range(0, len(per_p_text), 5):
+        label = "per-paraphrase effect: " if start == 0 else " " * 23
+        lines.append(label + ", ".join(per_p_text[start : start + 5]))
     if "instructed" in conditions:
         ctrl = paired_effect(rows, "neutral", "instructed", rng)
         lines.append(
@@ -193,10 +196,16 @@ def describe_effects(rows: pd.DataFrame, seed: int = BOOT_SEED) -> list[str]:
 def plot_cells(summary: pd.DataFrame, notes: dict[str, list[str]], path: Path) -> None:
     """Accuracy per cell, grouped by condition, one panel per model."""
     models = list(summary["model"].unique())
-    fig, axes = plt.subplots(1, len(models), figsize=(6 * len(models), 5), squeeze=False)
-    for ax, model in zip(axes[0], models):
-        _plot_model(ax, summary[summary["model"] == model], notes.get(model, []))
-        ax.set_title(model)
+    fig, axes = plt.subplots(
+        2, len(models), figsize=(8 * len(models), 7),
+        gridspec_kw={"height_ratios": [4, 1]}, squeeze=False,
+    )
+    for col, model in enumerate(models):
+        _plot_model(axes[0, col], summary[summary["model"] == model])
+        axes[0, col].set_title(model)
+        axes[1, col].axis("off")
+        axes[1, col].text(0, 1, "\n".join(notes.get(model, [])), va="top",
+                          fontsize=8, family="monospace")
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=150)
@@ -222,7 +231,7 @@ def _groups(cells: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
     ]
 
 
-def _plot_model(ax: plt.Axes, cells: pd.DataFrame, notes: list[str]) -> None:
+def _plot_model(ax: plt.Axes, cells: pd.DataFrame) -> None:
     groups = _groups(cells)
     neutral = cells[cells["condition"] == "neutral"]["acc_answered"]
     if cells["tier"].nunique() == 1 and len(neutral) > 1:
@@ -235,9 +244,7 @@ def _plot_model(ax: plt.Axes, cells: pd.DataFrame, notes: list[str]) -> None:
     ax.set_xlim(-0.5, len(groups) - 0.5)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("accuracy on answered items (Wilson 95%)")
-    if notes:
-        ax.text(0.02, 0.02, "\n".join(notes), transform=ax.transAxes, fontsize=7,
-                va="bottom", family="monospace")
+    ax.legend(loc="lower left", fontsize=8, frameon=False)
 
 
 def analyse(log_dir: Path, out_dir: Path) -> pd.DataFrame:

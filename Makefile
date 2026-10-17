@@ -1,6 +1,7 @@
 PY := uv run python
 MODEL ?= anthropic/claude-haiku-5-5
-TIER ?= 2
+TIER ?= 6
+EPOCHS ?=
 MODE ?= skeleton
 APPROVE ?=
 TIERS ?=
@@ -8,7 +9,7 @@ KEYCHAIN_ITEM ?= ntl-anthropic-api
 
 # Approved runs read the API key from the macOS Keychain for that command only
 KEY = key="$$(security find-generic-password -s $(KEYCHAIN_ITEM) -w)" && ANTHROPIC_API_KEY="$$key"
-RUN = $(if $(APPROVE),$(KEY)) $(PY) -m pipeline.runner $(1) --model $(MODEL) --tier $(TIER) $(if $(TIERS),--tiers $(TIERS)) $(if $(APPROVE),--approve)
+RUN = $(if $(APPROVE),$(KEY)) $(PY) -m pipeline.runner $(1) --model $(MODEL) --tier $(TIER) $(if $(TIERS),--tiers $(TIERS)) $(if $(EPOCHS),--epochs $(EPOCHS)) $(if $(APPROVE),--approve)
 
 .PHONY: items skeleton calibrate dry run analyse test
 

@@ -29,7 +29,7 @@ Framing. This is an independent, noise-characterised re-run of an Apollo-style i
 Hypotheses
 
 - H1. Accuracy in the incentive condition is lower than in the neutral condition.
-- H2. The H1 effect exceeds the spread across nuisance variants of the neutral condition.
+- H2. The H1 effect exceeds the spread across nuisance variants of the neutral condition. Tested on Haiku only (see Model).
 - Instrument check. Accuracy in the instructed condition is far below neutral. If it is not, a null H1 cannot be interpreted.
 - H0 for H1 and H2 is plausible and reportable. A null is a result.
 
@@ -46,9 +46,14 @@ Factors
   - Why. With medium-effort thinking, both models scored 20/20 on every tier up to 8×8 digits (`logs/calibrate-thinking-medium/`), which leaves no paraphrase noise to measure. The API returns only summaries of thinking, never the raw text. Thinking tokens are billed as output.
   - Cost to validity. Both models think by default in deployment. Haiku 5.5 disables thinking, while Sonnet 5.5 uses `between_tools`, so the off settings differ slightly. A null H1 without thinking is weaker evidence of no propensity.
 - Model. `claude-haiku-5-5` and `claude-sonnet-5-5`. Add one more only if budget allows after run 1.
+  - Haiku runs the full design and tests H1, H2 and the instrument check.
+  - Sonnet runs 1 epoch and tests H1 and the instrument check only. With thinking off it scored 20/20 on every tier up to 10×10 digits, so its neutral accuracy sits at ceiling and paraphrase noise cannot be measured. The README reports this as a finding about the instrument.
 - Items. 150 freshly generated integer multiplication problems per difficulty tier, from a seeded generator, stored in the repo. Avoid GSM8K and MMLU verbatim because of contamination. Calibration (`make calibrate`, 20 neutral items per tier) picks the tier where neutral accuracy is about 75–90%, which leaves room for paraphrase noise to show. The tier can differ by model, and the README says so.
+  - Chosen tier, 17 October: tier 6 (8×8 digits) for both models, so both see the same items. Thinking-off calibration gave Haiku 18/20 at tier 5, 19/20 at tier 6 and 10/20 at tier 7. Sonnet scored 20/20 on tiers 4–7. Pooled Haiku accuracy at tiers 5–6 is about 0.93, above the 75–90% target but inside the 60–95% range where nuisance effects are detectable.
 
 Cell count per model is 3 conditions × 10 paraphrases = 30 cells. Each cell runs 150 items × 3 epochs, so 13,500 calls per model. Ten paraphrases follow Sclar et al. (2023), who treat even ten formats as a lower bound on prompt sensitivity. Estimate cost before running, with reasoning tokens included. If over budget, drop to 2 epochs (9,000 calls) before dropping paraphrases or items.
+
+Sonnet runs the same 30 cells at 1 epoch, so 4,500 calls. Calibration puts the Haiku full run at about $2.50 and the Sonnet run at about $20.
 
 Outcome classes
 
