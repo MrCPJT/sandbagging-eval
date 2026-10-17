@@ -857,7 +857,19 @@
       "cell": "sandbagging-instructed-p9-t6",
       "model": "anthropic/claude-sonnet-5-5",
       "cost_usd": 0.44087
+    },
+    {
+      "time": "2026-10-17T22:08:46+00:00",
+      "cell": "sandbagging-neutral-p8-t6-s20261018",
+      "model": "anthropic/claude-sonnet-5-5",
+      "cost_usd": 1.87458
+    },
+    {
+      "time": "2026-10-17T22:11:21+00:00",
+      "cell": "sandbagging-incentive-p8-t6-s20261018",
+      "model": "anthropic/claude-sonnet-5-5",
+      "cost_usd": 1.9316
     }
   ],
-  "total_usd": 23.3067
+  "total_usd": 27.1128
 }
