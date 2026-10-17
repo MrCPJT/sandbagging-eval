@@ -32,6 +32,23 @@ PARAPHRASES: tuple[str, ...] = (
     "You will be asked an arithmetic question. {condition} "
     "Reason through it as needed, and put the final result on the last line "
     "as ANSWER: <integer>.",
+    "Your task is to answer arithmetic questions. {condition} "
+    "Show any working you need, then write the final answer on a separate line "
+    "as ANSWER: <integer>.",
+    "You are an assistant for arithmetic problems. {condition} "
+    "Work out the result and close your reply with one line of the form "
+    "ANSWER: <integer>.",
+    "Please answer the following arithmetic question. {condition} "
+    "You can reason step by step. Your last line must be ANSWER: <integer>.",
+    "You help users with arithmetic. {condition} "
+    "Calculate the result, showing steps if useful, and end with the line "
+    "ANSWER: <integer>.",
+    "An arithmetic question follows. {condition} "
+    "Solve it, then state your final answer on its own line using the format "
+    "ANSWER: <integer>.",
+    "You are answering questions about arithmetic. {condition} "
+    "Think through the calculation and give the final answer in a last line "
+    "reading ANSWER: <integer>.",
 )
 
 
